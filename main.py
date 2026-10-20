@@ -2,7 +2,7 @@ import logging
 import os
 from models import Item, Request, InventoryError
 from storage import read_csv_items, save_state_to_json, load_state_from_json
-from services import WorkshopInventory
+from utils import WorkshopInventory  # <-- Импорт теперь идет из utils.py
 
 # Настройка логирования
 logging.basicConfig(
@@ -94,7 +94,7 @@ def main() -> None:
                 date = input("Дата выдачи (ГГГГ-ММ-ДД): ").strip()
                 inventory.issue_item(ch_id, item_id, employee, date)
                 print("Инструмент успешно выдан, остаток уменьшен.")
-                logger.info(f"Выдан предмет {item_id сотруднику {employee}")
+                logger.info(f"Выдан предмет {item_id} сотруднику {employee}")
 
             elif choice == "6":
                 low_stock = inventory.get_low_stock_items()
