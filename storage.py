@@ -1,58 +1,55 @@
 import csv
 import json
-import os
-from models import Contact
+import logging
+from typing import Generator, List, Dict, Any
+from models import Item, Checkout, Request, InventoryError
 
-DATA_FILE = "contacts.json"
-CSV_FILE = "contacts.csv"
+logger = logging.getLogger(__name__)
 
-def save_to_json(contacts):
-    """Сохраняет список контактов в JSON файл с помощью to_dict()."""
-    data = [contact.to_dict() for contact in contacts]
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
 
-def load_from_json():
-    """Загружает контакты из JSON файла с помощью from_dict()."""
-    if not os.path.exists(DATA_FILE):
-        return []
+def read_csv_items(file_path: str) -> Generator[Dict[str, str], None, None]:
+    """Генератор для построчного чтения CSV-файла без загрузки всего файла в память."""
     try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
+        with open(file_path, mode="r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                yield row
+    except FileNotFoundError:
+        logger.error(f"CSV файл не найден: {file_path}")
+        raise InventoryError(f"Файл {file_path} не обнаружен.")
+    except Exception as e:
+        logger.error(f"Ошибка при чтении CSV: {e}")
+        raise InventoryError(f"Ошибка чтения файла: {e}")
+
+
+def save_state_to_json(file_path: str, data: Dict[str, List[Any]]) -> None:
+    """Сохранение текущего состояния системы в JSON."""
+    try:
+        serializable_data = {
+            "items": [vars(item) for item in data.get("items", [])],
+            "checkouts": [vars(ch) for ch in data.get("checkouts", [])],
+            "requests": [vars(req) for req in data.get("requests", [])]
+        }
+        with open(file_path, mode="w", encoding="utf-8") as f:
+            json.dump(serializable_data, f, ensure_ascii=False, indent=4)
+        logger.info(f"Состояние успешно сохранено в {file_path}")
+    except Exception as e:
+        logger.error(f"Не удалось сохранить JSON: {e}")
+        raise InventoryError(f"Ошибка сохранения данных: {e}")
+
+
+def load_state_from_json(file_path: str) -> Dict[str, list]:
+    """Загрузка состояния системы из JSON при запуске."""
+    try:
+        with open(file_path, mode="r", encoding="utf-8") as f:
             data = json.load(f)
-            # Восстанавливаем каждый объект через класс Contact
-            return [Contact.from_dict(item) for item in data]
+            items = [Item(**i) for i in data.get("items", [])]
+            checkouts = [Checkout(**c) for c in data.get("checkouts", [])]
+            requests = [Request(**r) for r in data.get("requests", [])]
+            return {"items": items, "checkouts": checkouts, "requests": requests}
+    except FileNotFoundError:
+        logger.warning(f"Файл состояния {file_path} не найден. Начинаем с пустыми данными.")
+        return {"items": [], "checkouts": [], "requests": []}
     except Exception as e:
-        print(f"❌ Ошибка загрузки: {e}")
-        return []
-
-def export_to_csv(contacts):
-    """
-    #ЭКСПОРТ_В_CSV: Автоматически собирает все возможные ключи (поля) из всех 
-    контактов и записывает их в таблицу CSV, избегая ошибок отсутствия ключей.
-    """
-    if not contacts:
-        print("📭 Нет данных для экспорта в CSV.")
-        return
-
-    # Превращаем все контакты в словари
-    dicts_data = [c.to_dict() for c in contacts]
-
-    # Собираем абсолютно все уникальные поля со всех объектов (name, phone, birthday, company и т.д.)
-    fieldnames = set()
-    for item in dicts_data:
-        fieldnames.update(item.keys())
-    
-    # Превращаем во фрейм-список, гарантируя, что первыми пойдут type, name, phone
-    priority_fields = ["type", "name", "phone"]
-    other_fields = sorted([f for f in fieldnames if f not in priority_fields])
-    final_fieldnames = [f for f in priority_fields if f in fieldnames] + other_fields
-
-    try:
-        with open(CSV_FILE, "w", newline="", encoding="utf-8-sig") as f:
-            writer = csv.DictWriter(f, fieldnames=final_fieldnames)
-            writer.writeheader()  # Записываем шапку таблицы
-            for row in dicts_data:
-                writer.writerow(row)  # Записываем строки с данными
-        print(f"📁 Успешно экспортировано в файл: {CSV_FILE}")
-    except Exception as e:
-        print(f"❌ Ошибка при экспорте в CSV: {e}")
+        logger.error(f"Ошибка загрузки JSON: {e}")
+        return {"items": [], "checkouts": [], "requests": []}
