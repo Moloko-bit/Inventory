@@ -1,0 +1,35 @@
+{
+    "items": [
+        {
+            "item_id": "MS-101",
+            "title": "Диск отрезной 125мм",
+            "category": "Расходник",
+            "_quantity": 4,
+            "min_limit": 4
+        },
+        {
+            "item_id": "TL-001",
+            "title": "Дрель аккумуляторная",
+            "category": "Инструмент",
+            "_quantity": 6,
+            "min_limit": 1
+        },
+        {
+            "item_id": "TL-002",
+            "title": "Набор ключей рожковых",
+            "category": "Инструмент",
+            "_quantity": 9,
+            "min_limit": 2
+        }
+    ],
+    "checkouts": [
+        {
+            "checkout_id": "TL-002",
+            "item_id": "TL-002",
+            "employee": "Акакий Какашкавич Сарафанов",
+            "date_issued": "2026-12-01",
+            "is_returned": false
+        }
+    ],
+    "requests": []
+}
